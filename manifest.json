@@ -1,0 +1,11 @@
+{
+  "name": "Entregas TX",
+  "short_name": "Entregas TX",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12355b",
+  "theme_color": "#12355b",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
