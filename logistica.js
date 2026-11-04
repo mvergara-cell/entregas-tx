@@ -12,14 +12,18 @@ async function iniciarStaff() {
   await cargarUsuarios();
   VIEWS = [
     { id: 'inicio', label: 'Inicio', icon: I.home, title: 'Resumen del día', bottom: true, bo: 1, render: vistaInicio },
-    { id: 'mapa', label: 'Mapa', icon: I.map, title: 'Seguimiento de camiones', bottom: true, bo: 2, render: vistaMapa },
-    { id: 'guias', label: 'Guías', icon: I.doc, title: 'Asignación de guías', bottom: true, bo: 4, render: vistaGuias },
-    { id: 'entregas', label: 'Entregas', icon: I.box, title: 'Registro de entregas', bottom: true, bo: 5, render: vistaEntregas },
+    { id: 'pendientes', label: 'Pendientes', icon: I.upload, title: 'Pendientes de despacho', bottom: true, bo: 2, render: vistaPendientes },
+    { id: 'rutas', label: 'Rutas', icon: I.truck, title: 'Rutas y asignación de camiones', bottom: true, bo: 4, render: vistaRutas },
+    { id: 'mapa', label: 'Mapa', icon: I.map, title: 'Seguimiento de camiones', bottom: true, bo: 5, render: vistaMapa },
+    { id: 'flota', label: 'Flota', icon: I.factory, title: 'Flota interna y externa', render: vistaFlota },
+    { id: 'guias', label: 'Guías', icon: I.doc, title: 'Guías asignadas', render: vistaGuias },
+    { id: 'entregas', label: 'Entregas', icon: I.box, title: 'Registro de entregas', render: vistaEntregas },
     { id: 'devoluciones', label: 'Devoluc.', icon: I.ret, title: 'Devoluciones', render: vistaDevoluciones },
     { id: 'usuarios', label: 'Usuarios', icon: I.users, title: 'Choferes y usuarios', render: vistaUsuarios },
     { id: 'catalogos', label: 'Catálogos', icon: I.tag, title: 'Catálogos', render: vistaCatalogos },
     { id: '_nueva', act: 'nueva-guia', label: 'Nueva guía', icon: I.plus, bottom: true, bo: 3 },
   ];
+  try { await cargarConfig(); } catch {}
   montarShell('staff');
 }
 
@@ -143,7 +147,7 @@ function editarGuia(g, alGuardar) {
       ${fld('Detalle de carga', `<textarea name="detalle" placeholder="Ej: 120 sacos Pega Bloque, 40 sacos Estuco">${esc(g.detalle || '')}</textarea>`)}
     </fieldset>
     <fieldset><legend>Cliente y destino</legend>
-      <div class="fg">${fld('Cliente', `<input name="cliente" required value="${esc(g.cliente || '')}">`, 1)}${fld('Obra', `<input name="obra" value="${esc(g.obra || '')}">`)}</div>
+      <div class="fg3">${fld('Cliente', `<input name="cliente" required value="${esc(g.cliente || '')}">`, 1)}${fld('RUT cliente', `<input name="cliente_rut" value="${esc(g.cliente_rut || '')}" placeholder="Para el seguimiento del cliente">`)}${fld('Obra', `<input name="obra" value="${esc(g.obra || '')}">`)}</div>
       <div class="fg">${fld('Dirección de entrega', `<input name="direccion" required value="${esc(g.direccion || '')}">`, 1)}${fld('Comuna', `<input name="comuna" value="${esc(g.comuna || '')}">`)}</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" class="btn sm" id="bBuscar">${I.pin}Buscar dirección en el mapa</button><span class="sub">o toca el mapa para fijar el punto exacto</span></div>
       <div class="picker" id="mapG"></div>
@@ -175,7 +179,7 @@ function editarGuia(g, alGuardar) {
     ev.preventDefault();
     const d = Object.fromEntries(new FormData(f));
     d.orden = +d.orden || 0; d.dest_lat = d.dest_lat ? +d.dest_lat : null; d.dest_lng = d.dest_lng ? +d.dest_lng : null;
-    for (const k of ['obra', 'comuna', 'contacto', 'telefono', 'detalle', 'observacion']) d[k] = d[k]?.trim() || null;
+    for (const k of ['obra', 'cliente_rut', 'comuna', 'contacto', 'telefono', 'detalle', 'observacion']) d[k] = d[k]?.trim() || null;
     d.folio = d.folio.trim(); d.chofer_id = d.chofer_id || null;
     const { error } = n ? await sb.from('ent_guias').insert(d) : await sb.from('ent_guias').update(d).eq('id', g.id);
     if (error) return toast(errMsg(error));
@@ -450,17 +454,17 @@ async function vistaDevoluciones(el) {
 async function vistaUsuarios(el) {
   await cargarUsuarios();
   const esAdmin = S.perfil.rol === 'admin';
-  $('#top-actions').innerHTML = `<button class="btn primary" id="uNuevo">${I.plus}<span>Crear chofer</span></button>`;
+  $('#top-actions').innerHTML = `<button class="btn" id="uCli">${I.plus}<span>Crear cliente</span></button><button class="btn primary" id="uNuevo">${I.plus}<span>Crear chofer</span></button>`;
   el.innerHTML = `<div class="sec-h"><div><h2>Usuarios de Entregas TX</h2><p>Los choferes ingresan con su <b>RUT y clave</b>. El personal de Logística crea su cuenta con su correo y ${esAdmin ? 'tú le asignas' : 'un administrador le asigna'} el perfil.</p></div></div>
     <div class="card tbl-wrap"><table><thead><tr><th>Nombre</th><th>RUT</th><th>Teléfono</th><th>Acceso</th><th>Perfil</th><th>Activo</th><th></th></tr></thead><tbody>
     ${S.usuarios.map(u => `<tr data-id="${u.id}">
-      <td><b>${esc(u.nombre)}</b></td><td class="num">${esc(u.rut || '')}</td><td class="num">${esc(u.telefono || '')}</td>
+      <td><b>${esc(u.nombre)}</b></td><td class="num">${esc(u.rut || u.cliente_rut || '')}${u.rol === 'cliente' && u.cliente_nombre ? `<div class="sub">${esc(u.cliente_nombre)}</div>` : ''}</td><td class="num">${esc(u.telefono || '')}</td>
       <td class="sub">${u.email?.endsWith('@' + DOMINIO_CHOFER) ? 'RUT + clave' : esc(u.email || '')}</td>
       <td>${esAdmin && u.id !== S.perfil.id ? `<select data-rol style="width:auto">${Object.entries(ROL_CORTO).map(([k, v]) => `<option value="${k}" ${k === u.rol ? 'selected' : ''}>${v}</option>`).join('')}</select>` : `<span class="chip ${u.rol === 'pendiente' ? 'warn' : u.rol === 'admin' ? 'brand' : ''}">${ROL_CORTO[u.rol]}</span>`}</td>
       <td>${esAdmin && u.id !== S.perfil.id ? `<input type="checkbox" data-act2 ${u.activo ? 'checked' : ''} style="width:auto">` : (u.activo ? 'Sí' : 'No')}</td>
       <td class="r" style="white-space:nowrap">${u.rol === 'chofer' || (esAdmin && u.email?.endsWith('@' + DOMINIO_CHOFER)) ? '<button class="btn sm" data-clave>Cambiar clave</button> ' : ''}${esAdmin && u.id !== S.perfil.id ? '<button class="btn sm danger" data-borrar>Eliminar</button>' : ''}</td></tr>`).join('')}
     </tbody></table></div>
-    <div class="grid g3 block">${[['Chofer', 'Ve solo sus guías. Marca llegada, fotos, receptor, firma y devoluciones.'], ['Logística', 'Asigna guías, sigue los camiones, revisa entregas y crea choferes.'], ['Admin', 'Todo lo anterior, más asignar perfiles y eliminar usuarios.']].map(([t, d]) => `<div class="card" style="padding:14px"><b>${t}</b><div class="sub">${d}</div></div>`).join('')}</div>`;
+    <div class="grid g3 block">${[['Chofer', 'Recibe las cargas asignadas, las acepta en planta y registra llegada, fotos, firma y devoluciones.'], ['Logística', 'Carga pendientes, arma rutas, asigna camiones, sigue la flota y revisa entregas.'], ['Admin', 'Todo lo anterior, más asignar perfiles y eliminar usuarios.'], ['Cliente', 'Ve en el mapa dónde va el camión con sus despachos (según su RUT) y el historial de entregas.']].map(([t, d]) => `<div class="card" style="padding:14px"><b>${t}</b><div class="sub">${d}</div></div>`).join('')}</div>`;
   $$('[data-rol]', el).forEach(s => s.onchange = async () => { const { error } = await sb.from('ent_usuarios').update({ rol: s.value }).eq('id', s.closest('tr').dataset.id); toast(error ? errMsg(error) : 'Perfil actualizado'); });
   $$('[data-act2]', el).forEach(c => c.onchange = async () => { const { error } = await sb.from('ent_usuarios').update({ activo: c.checked }).eq('id', c.closest('tr').dataset.id); toast(error ? errMsg(error) : 'Actualizado'); });
   $$('[data-clave]', el).forEach(b => b.onclick = async () => {
@@ -476,12 +480,28 @@ async function vistaUsuarios(el) {
     const r = await llamarFuncion({ accion: 'eliminar', id: u.id, borrar_login: borrarLogin });
     toast(r.error || 'Usuario eliminado'); if (!r.error) go('usuarios');
   });
+  $('#uCli').onclick = () => {
+    const sh = openSheet('Crear acceso de cliente', `<form id="fcl" class="form"><fieldset><legend>Cliente</legend>
+      ${fld('Empresa / cliente', '<input name="cliente_nombre" required>', 1)}
+      <div class="fg">${fld('RUT de la empresa', '<input name="rut" required placeholder="76.123.456-7">', 1)}${fld('Nombre del contacto', '<input name="nombre" required>', 1)}</div>
+      <div class="fg">${fld('Correo (usuario)', '<input name="email" type="email" required>', 1)}${fld('Teléfono', '<input name="telefono" type="tel">')}</div>
+      ${fld('Clave inicial (mín. 8)', `<input name="password" required minlength="8" value="TX${Math.random().toString().slice(2, 8)}" class="mono">`, 1)}
+      <div class="ctx">El cliente verá solo los despachos cuyo RUT de cliente coincida con este. Ingresa en la pestaña “Cliente” con su correo y clave.</div></fieldset>
+      <div class="actions"><button class="btn primary">Crear acceso</button></div></form>`, { eyebrow: 'Usuarios' });
+    $('#fcl', sh).onsubmit = async (ev) => {
+      ev.preventDefault(); const d = Object.fromEntries(new FormData(ev.target));
+      const r = await llamarFuncion({ accion: 'crear_cliente', ...d });
+      if (r.error) return toast(r.error);
+      alert(`Acceso de cliente creado.\n\nUsuario: ${d.email}\nClave: ${d.password}\n\nLink: ${location.href.split('#')[0]} (pestaña Cliente)`);
+      closeSheet(); go('usuarios');
+    };
+  };
   $('#uNuevo').onclick = () => {
     const sh = openSheet('Crear chofer', `<form id="fc" class="form"><fieldset><legend>Datos del chofer</legend>
       ${fld('Nombre completo', '<input name="nombre" required>', 1)}
       <div class="fg">${fld('RUT', '<input name="rut" required placeholder="12.345.678-9">', 1)}${fld('Teléfono', '<input name="telefono" type="tel">')}</div>
       ${fld('Clave inicial (mín. 6)', `<input name="password" required minlength="6" value="${Math.random().toString().slice(2, 8)}" class="mono">`, 1)}
-      <div class="ctx">Entrégale al chofer el link de la app, su RUT y esta clave. Ingresa en la pestaña “Soy chofer”.</div></fieldset>
+      <div class="ctx">Entrégale al chofer el link de la app, su RUT y esta clave. Ingresa en la pestaña “Chofer”.</div></fieldset>
       <div class="actions"><button class="btn primary">Crear chofer</button></div></form>`, { eyebrow: 'Usuarios' });
     $('#fc', sh).onsubmit = async (ev) => {
       ev.preventDefault(); const d = Object.fromEntries(new FormData(ev.target));
@@ -510,8 +530,7 @@ async function vistaCatalogos(el) {
   <div class="grid g2 block">
     <div><div class="sec-h"><div><h2>Motivos de devolución</h2></div><button class="btn sm" id="cM">${I.plus}Motivo</button></div>
       <div class="card"><ul class="list">${S.motivos.map(m => `<li class="click" data-m="${m.id}"><span class="tx"><b>${esc(m.motivo)}</b></span>${m.activo ? '' : '<span class="chip">Inactivo</span>'}</li>`).join('')}</ul></div></div>
-    <div><div class="sec-h"><div><h2>Vehículos</h2><p>Opcional: sugiere patentes al chofer y une el GPS de GPSur.</p></div><button class="btn sm" id="cV">${I.plus}Vehículo</button></div>
-      <div class="card tbl-wrap">${S.vehiculos.length ? `<table><thead><tr><th>Patente</th><th>Descripción</th><th>ID GPSur</th></tr></thead><tbody>${S.vehiculos.map(v => `<tr class="click" data-v="${esc(v.patente)}"><td class="num"><b>${esc(v.patente)}</b></td><td>${esc(v.descripcion || '')}</td><td class="num">${esc(v.gpsur_id || '')}</td></tr>`).join('')}</tbody></table>` : '<div class="empty"><b>Sin vehículos</b>Agrega los camiones para que el chofer elija la patente.</div>'}</div></div>
+    <div class="card" style="padding:16px;display:grid;gap:8px;align-content:start"><b>Camiones</b><span class="sub">La flota interna y externa (capacidad, peoneta, contratista, chofer habitual y disponibilidad) se administra en Flota.</span><div><button class="btn sm" data-act="go" data-to="flota">${I.truck}Ir a Flota</button></div></div>
   </div>`;
   const recargar = () => go('catalogos');
   const chk = (name, v) => `<label style="display:flex;gap:8px;align-items:center;font-size:13.5px"><input type="checkbox" name="${name}" style="width:auto" ${v ? 'checked' : ''}> Activo</label>`;
@@ -548,20 +567,7 @@ async function vistaCatalogos(el) {
   };
   $('#cM').onclick = () => formMot(null);
   $$('[data-m]', el).forEach(li => li.onclick = () => formMot(S.motivos.find(m => m.id === +li.dataset.m)));
-  const formVeh = (v) => {
-    const n = !v; v = v || { activo: true };
-    const sh = openSheet(n ? 'Nuevo vehículo' : 'Editar vehículo', `<form id="fv" class="form"><fieldset><legend>Vehículo</legend>
-      ${fld('Patente', `<input name="patente" required value="${esc(v.patente || '')}" ${n ? '' : 'readonly'} class="mono" style="text-transform:uppercase">`, 1)}
-      ${fld('Descripción', `<input name="descripcion" value="${esc(v.descripcion || '')}" placeholder="Camión rampla, 3/4…">`)}
-      ${fld('ID en GPSur', `<input name="gpsur_id" value="${esc(v.gpsur_id || '')}">`)}${chk('activo', v.activo)}</fieldset>
-      <div class="actions"><button class="btn primary">Guardar</button></div></form>`, { eyebrow: 'Catálogos' });
-    $('#fv', sh).onsubmit = async (ev) => { ev.preventDefault(); const f = ev.target;
-      const d = { patente: f.patente.value.toUpperCase().replace(/[^A-Z0-9]/g, ''), descripcion: f.descripcion.value.trim() || null, gpsur_id: f.gpsur_id.value.trim() || null, activo: f.activo.checked };
-      const { error } = n ? await sb.from('ent_vehiculos').insert(d) : await sb.from('ent_vehiculos').update(d).eq('patente', v.patente);
-      if (error) return toast(errMsg(error)); closeSheet(); recargar(); };
-  };
-  $('#cV').onclick = () => formVeh(null);
-  $$('[data-v]', el).forEach(tr => tr.onclick = () => formVeh(S.vehiculos.find(v => v.patente === tr.dataset.v)));
+
 }
 
 /* ---------- arranque ---------- */

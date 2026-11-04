@@ -5,9 +5,15 @@ App web (PWA) para el registro de entregas en obra de Grupo TX.
 - **Chofer** (ingresa con RUT + clave desde el celular): ve las guías que Logística le asignó, marca **"Llegué al destino"** (se guarda la geolocalización de ese clic), saca fotos de la mercadería, registra quién recibe, firma en pantalla y, si corresponde, detalla devoluciones (código de producto + cantidad + motivo). Su nombre se completa automáticamente desde la cuenta; solo ingresa la **patente** al iniciar la jornada.
 - **Logística / Admin** (ingresa con correo): asigna guías a cada transportista con dirección de entrega (manual o pegando desde Excel), ve el **mapa de seguimiento** con el trayecto de cada camión, los puntos de llegada y alertas cuando el aviso se hizo lejos del destino (> 300 m), revisa cada entrega (fotos, firma, receptor), analiza devoluciones y exporta todo a CSV.
 
+- **Planificación** (Logística): carga el Excel de **pendientes de despacho** (columnas detectadas automáticamente), **arma rutas** según la capacidad de cada camión (respeta peoneta, paradas máximas y distancia entre paradas, prefiere flota interna) y luego el administrador **asigna el camión** (valida disponibilidad, capacidad, peoneta y que no tenga otra ruta ese día) y el chofer. Al asignar, el chofer recibe el aviso de presentarse en planta a cargar (campana en la app + aviso del navegador + enlace de WhatsApp).
+- **Flota**: camiones de **flota interna y externa** (contratista, capacidad en ton, peoneta, chofer habitual, ID GPSur, disponible). Aquí también se define la ubicación de la planta.
+- **Cliente** (ingresa con correo, creado por Logística con el RUT de la empresa): ve en un mapa dónde va su carga, cuántas entregas faltan antes de la suya y el historial de recepciones.
+
+> Esta app funciona como módulo **Entregas** dentro del portal **Apps Grupo TX** (`/apps-tx/`), que la abre en un marco desde `../entregas-tx/`. Publicar cambios en este repositorio actualiza el módulo dentro del portal.
+
 ## Publicar en GitHub Pages
 
-1. Crea un repositorio nuevo (ej. `entregas-tx`) y sube **todos** los archivos de esta carpeta (`index.html`, `app.js`, `logistica.js`, `styles.css`, `manifest.json`, `sw.js`, `icon.svg`).
+1. Crea un repositorio nuevo (ej. `entregas-tx`) y sube **todos** los archivos de esta carpeta (`index.html`, `app.js`, `logistica.js`, `planificacion.js`, `cliente.js`, `styles.css`, `manifest.webmanifest`, `sw.js`, `icon-512.png`).
 2. En el repo: **Settings → Pages → Source: Deploy from a branch → main / root**.
 3. La app queda en `https://<tu-usuario>.github.io/entregas-tx/`.
 4. En Supabase (proyecto **Silos_TX_360**) → *Authentication → URL Configuration*: agrega esa URL en **Redirect URLs** (para el correo de "olvidé mi clave").

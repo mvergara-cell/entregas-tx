@@ -20,6 +20,7 @@ const fechaHoraCL = (iso) => iso ? `${fechaCL(iso)} ${horaCL(iso)}` : '';
 const diaCL = (iso) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date(iso));
 const sumarDias = (f, n) => { const d = new Date(f + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const limpiarRut = (r) => (r || '').replace(/[^0-9kK]/g, '').toLowerCase();
+const fmtNum = (n) => (Math.round((+n || 0) * 10) / 10).toLocaleString('es-CL');
 const fmtM = (m) => m == null ? '—' : (m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m');
 const minutos = (a, b) => (a && b) ? Math.round((new Date(b) - new Date(a)) / 60000) : null;
 const iniciales = (n) => (n || '?').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
@@ -28,7 +29,7 @@ const EST_CHIP = { asignada: '', en_destino: 'warn', entregada: 'ok', entregada_
 const EST_COLOR = { asignada: 'var(--muted)', en_destino: 'var(--warn)', entregada: 'var(--ok)', entregada_con_devolucion: 'var(--info)', rechazada: 'var(--bad)', anulada: 'var(--muted)' };
 const badge = (e) => `<span class="chip ${EST_CHIP[e] ?? ''}">${ESTADOS[e] || esc(e)}</span>`;
 const COLORES = ['#e4032e', '#2459a8', '#18864a', '#b86e00', '#7a3fb0', '#0e8a9a', '#5e6066', '#c2185b', '#3d5a1e', '#8a5a2b'];
-const ROL_CORTO = { admin: 'Admin', logistica: 'Logística', chofer: 'Chofer', pendiente: 'Pendiente' };
+const ROL_CORTO = { admin: 'Admin', logistica: 'Logística', chofer: 'Chofer', cliente: 'Cliente', pendiente: 'Pendiente' };
 function distM(a, b, c, d) { const R = 6371000, r = x => x * Math.PI / 180; const h = Math.sin(r(c - a) / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(r(d - b) / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
 const entregaDe = (g) => Array.isArray(g.ent_entregas) ? g.ent_entregas[0] : g.ent_entregas;
 
@@ -56,6 +57,9 @@ const I = {
   tag: ic('<path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="8.5" r="1.5"/>'),
   phone: ic('<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/>'),
   nav: ic('<path d="M3 11l18-8-8 18-2-8-8-2z"/>'),
+  bell: ic('<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2z"/><path d="M10 20a2 2 0 0 0 4 0"/>'),
+  factory: ic('<path d="M3 21V10l6 4V10l6 4V6l6-3v18z"/>'),
+  upload: ic('<path d="M12 20V9M7 14l5-5 5 5M5 4h14"/>'),
   refresh: ic('<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>'),
 };
 
@@ -235,21 +239,22 @@ function menuUsuario() {
 /* ================== AUTENTICACIÓN ================== */
 function pantallaAuth(modo = 'chofer', msg = '') {
   $('#splash').hidden = true; $('#app-shell').hidden = true; $('#auth').hidden = false;
-  const titulos = { chofer: 'Ingreso choferes', staff: 'Ingreso personal TX', signup: 'Crear cuenta', reset: 'Recuperar contraseña', newpass: 'Nueva contraseña' };
+  const titulos = { chofer: 'Ingreso choferes', staff: 'Ingreso personal TX', cliente: 'Ingreso clientes', signup: 'Crear cuenta', reset: 'Recuperar contraseña', newpass: 'Nueva contraseña' };
   const f = $('#auth .auth-form');
   f.innerHTML = `
     <h2>${titulos[modo]}</h2>
-    ${['chofer', 'staff'].includes(modo) ? `<div class="seg-f" style="width:100%;display:grid;grid-template-columns:1fr 1fr"><button type="button" data-m="chofer" aria-pressed="${modo === 'chofer'}">Soy chofer</button><button type="button" data-m="staff" aria-pressed="${modo === 'staff'}">Personal TX</button></div>` : ''}
+    ${['chofer', 'staff', 'cliente'].includes(modo) ? `<div class="seg-f" style="width:100%;display:grid;grid-template-columns:1fr 1fr 1fr"><button type="button" data-m="chofer" aria-pressed="${modo === 'chofer'}">Chofer</button><button type="button" data-m="staff" aria-pressed="${modo === 'staff'}">Personal TX</button><button type="button" data-m="cliente" aria-pressed="${modo === 'cliente'}">Cliente</button></div>` : ''}
     ${msg ? `<div class="ctx">${msg}</div>` : ''}
     <form id="af" class="form" novalidate style="gap:12px">
       ${modo === 'signup' ? fld('Nombre y apellido', '<input id="a-nombre" autocomplete="name">', 1) : ''}
       ${modo === 'chofer' ? fld('RUT', '<input id="a-rut" autocomplete="username" placeholder="12.345.678-9">', 1) : ''}
-      ${['staff', 'signup', 'reset'].includes(modo) ? fld('Correo', '<input id="a-email" type="email" autocomplete="email" inputmode="email" placeholder="nombre@grupotx.cl">', 1) : ''}
-      ${modo !== 'reset' ? fld(modo === 'newpass' ? 'Nueva contraseña' : 'Contraseña', `<input id="a-pass" type="password" autocomplete="${['chofer', 'staff'].includes(modo) ? 'current-password' : 'new-password'}">`, 1) : ''}
+      ${['staff', 'signup', 'reset', 'cliente'].includes(modo) ? fld('Correo', '<input id="a-email" type="email" autocomplete="email" inputmode="email" placeholder="nombre@grupotx.cl">', 1) : ''}
+      ${modo !== 'reset' ? fld(modo === 'newpass' ? 'Nueva contraseña' : 'Contraseña', `<input id="a-pass" type="password" autocomplete="${['chofer', 'staff', 'cliente'].includes(modo) ? 'current-password' : 'new-password'}">`, 1) : ''}
       <div class="ctx err" id="a-err" hidden></div>
-      <button class="btn primary" id="a-go" style="width:100%;padding:13px">${{ chofer: 'Ingresar', staff: 'Ingresar', signup: 'Crear cuenta', reset: 'Enviar enlace', newpass: 'Guardar contraseña' }[modo]}</button>
+      <button class="btn primary" id="a-go" style="width:100%;padding:13px">${{ chofer: 'Ingresar', staff: 'Ingresar', cliente: 'Ingresar', signup: 'Crear cuenta', reset: 'Enviar enlace', newpass: 'Guardar contraseña' }[modo]}</button>
     </form>
     <div class="auth-links">${modo === 'staff' ? '<button data-m="signup">Crear cuenta</button><button data-m="reset">Olvidé mi contraseña</button>'
+      : modo === 'cliente' ? '<span class="sub">Sigue tus despachos en el mapa. Tu acceso lo entrega Grupo TX.</span><button data-m="reset">Olvidé mi contraseña</button>'
       : modo === 'chofer' ? '<span class="sub">Tu cuenta la crea Logística. Si olvidaste tu clave, pídeles que la restablezcan.</span>'
       : '<button data-m="staff">Volver a ingresar</button>'}</div>`;
   $$('[data-m]', f).forEach(b => b.onclick = () => pantallaAuth(b.dataset.m));
@@ -259,7 +264,7 @@ function pantallaAuth(modo = 'chofer', msg = '') {
     const go = $('#a-go'); go.disabled = true;
     try {
       const pass = $('#a-pass')?.value || '';
-      if (modo === 'chofer' || modo === 'staff') {
+      if (modo === 'chofer' || modo === 'staff' || modo === 'cliente') {
         const email = modo === 'chofer' ? `${limpiarRut($('#a-rut').value)}@${DOMINIO_CHOFER}` : $('#a-email').value.trim().toLowerCase();
         const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
         if (error) throw new Error(error.message.includes('Invalid') ? (modo === 'chofer' ? 'RUT o clave incorrectos' : 'Correo o contraseña incorrectos') : error.message);
@@ -301,6 +306,7 @@ async function cargarPerfil(user) {
   S.perfil = data;
   if (!data.activo) return pantallaPendiente('Tu acceso fue desactivado. Habla con Logística.');
   if (data.rol === 'pendiente') return pantallaPendiente('Tu cuenta está creada. Un administrador debe asignarte un perfil (Chofer, Logística o Admin) para que puedas usar la aplicación.');
+  if (data.rol === 'cliente') return iniciarCliente();
   await cargarCatalogos();
   if (data.rol === 'chofer') return iniciarChofer();
   return iniciarStaff();
@@ -347,14 +353,72 @@ async function iniciarChofer() {
   S.jornada = j;
   montarShell('chofer');
   if (j) iniciarTracking();
+  iniciarAvisos();
+}
+
+/* --- avisos al chofer (cargas asignadas) --- */
+const AV = { timer: null, vistas: new Set(), primera: true };
+function iniciarAvisos() {
+  clearInterval(AV.timer);
+  if ('Notification' in window && Notification.permission === 'default') { try { Notification.requestPermission(); } catch {} }
+  revisarAvisos();
+  AV.timer = setInterval(() => { if (S.modo === 'chofer') revisarAvisos(); }, 30000);
+}
+async function revisarAvisos() {
+  const { data } = await sb.from('ent_notificaciones').select('*').eq('usuario_id', S.perfil.id).eq('leida', false).order('created_at', { ascending: false }).limit(20);
+  S.avisos = data || [];
+  const nuevos = S.avisos.filter(a => !AV.vistas.has(a.id));
+  nuevos.forEach(a => AV.vistas.add(a.id));
+  pintarCampana();
+  if (nuevos.length && !AV.primera) {
+    try { navigator.vibrate && navigator.vibrate([300, 150, 300]); } catch {}
+    try { if ('Notification' in window && Notification.permission === 'granted') new Notification(nuevos[0].titulo, { body: nuevos[0].cuerpo || '', icon: 'icon-512.png' }); } catch {}
+    toast(nuevos[0].titulo + (nuevos[0].cuerpo ? ': ' + nuevos[0].cuerpo : ''));
+    if (S.view === 'ruta' && $('#sheet-bg').hidden) go('ruta');
+  }
+  AV.primera = false;
+}
+function pintarCampana() {
+  const b = $('#bAvisos'); if (!b) return;
+  const n = (S.avisos || []).length;
+  b.innerHTML = `${I.bell}${n ? `<span class="dot">${n}</span>` : ''}`;
+}
+function verAvisos() {
+  const sh = openSheet('Avisos', (S.avisos || []).length ? `<ul class="list card">${S.avisos.map(a => `<li><span class="tx"><b>${esc(a.titulo)}</b><span class="sub">${esc(a.cuerpo || '')} · ${fechaHoraCL(a.created_at)}</span></span></li>`).join('')}</ul><div class="actions block"><button class="btn" id="avLeer">Marcar como leídos</button></div>` : '<div class="card empty"><b>Sin avisos nuevos</b></div>', { eyebrow: 'Logística' });
+  if ($('#avLeer', sh)) $('#avLeer', sh).onclick = async () => { await sb.from('ent_notificaciones').update({ leida: true }).in('id', S.avisos.map(a => a.id)); S.avisos = []; pintarCampana(); closeSheet(); };
 }
 
 function topChofer() {
-  $('#top-actions').innerHTML = S.jornada
+  $('#top-actions').innerHTML = (S.jornada
     ? `<span class="gps" id="gpsInd"></span><button class="pat" id="bPat" title="Cambiar patente">${esc(S.jornada.patente)}</button>`
-    : '';
+    : '') + `<button class="xbtn bellbtn" id="bAvisos" aria-label="Avisos"></button>`;
   if ($('#bPat')) $('#bPat').onclick = () => pedirPatente(true);
-  pintarGps();
+  $('#bAvisos').onclick = verAvisos;
+  pintarGps(); pintarCampana();
+}
+
+async function iniciarJornadaCon(pat) {
+  if (S.jornada?.patente === pat) return;
+  if (S.jornada?.id) await sb.from('ent_jornadas').update({ fin_at: new Date().toISOString() }).eq('id', S.jornada.id);
+  const { data, error } = await sb.from('ent_jornadas').insert({ chofer_id: S.perfil.id, patente: pat }).select().single();
+  if (error) throw error;
+  S.jornada = { uid: S.perfil.id, fecha: hoy(), patente: pat, id: data.id };
+  guardarJornada(S.jornada); iniciarTracking();
+}
+
+function tarjetaCarga(r, guias) {
+  const paso = { asignada: 1, aceptada: 2, en_ruta: 3 }[r.estado];
+  return `<div class="hero" style="grid-template-columns:minmax(0,1fr);margin-bottom:14px" data-ruta="${r.id}">
+    <div>
+      <span class="eyebrow" style="color:var(--brand)">${r.estado === 'asignada' ? 'Nueva carga asignada' : r.estado === 'aceptada' ? 'Carga en planta' : 'En ruta'} · ${fechaCL(r.fecha)}</span>
+      <h2 style="margin:6px 0 4px;font-size:24px;font-weight:800;letter-spacing:-.02em">${r.estado === 'asignada' ? 'Preséntate en planta a cargar' : r.estado === 'aceptada' ? 'Carga el camión y sal a ruta' : 'Ruta en curso'}</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px"><span class="pat" style="cursor:default;background:var(--bg);color:var(--ink)">${esc(r.patente)}</span><span class="chip plain" style="background:color-mix(in srgb,var(--bg) 15%,transparent);color:inherit">${fmtNum(r.peso_ton)} ton</span><span class="chip plain" style="background:color-mix(in srgb,var(--bg) 15%,transparent);color:inherit">${guias.length} parada(s)</span></div>
+      <ol style="margin:0 0 14px;padding-left:18px;opacity:.9;display:grid;gap:2px">${guias.map(g => `<li>${esc(g.cliente)} · ${esc(g.comuna || g.direccion)}</li>`).join('')}</ol>
+      <div class="ratio" style="margin:0 0 6px">${[1, 2, 3].map(i => `<i style="width:33.3%;background:${i <= paso ? 'var(--brand)' : 'transparent'}"></i>`).join('')}</div>
+      <div class="legend" style="margin-bottom:14px"><span style="--c:var(--brand)">1 Asignada</span><span style="--c:${paso >= 2 ? 'var(--brand)' : 'transparent'}">2 En planta</span><span style="--c:${paso >= 3 ? 'var(--brand)' : 'transparent'}">3 En ruta</span></div>
+      ${r.estado === 'asignada' ? `<button class="btn primary xl" data-racc="aceptar">${I.check}Acepto, voy a planta</button>` : ''}
+      ${r.estado === 'aceptada' ? `<button class="btn primary xl" data-racc="salir">${I.truck}Cargado, salgo a ruta</button>` : ''}
+    </div></div>`;
 }
 
 function pedirPatente(cambio = false) {
@@ -420,7 +484,7 @@ function pintarGps() {
   el.innerHTML = `<i></i>${T.estado === 'on' ? 'GPS activo' : T.estado === 'err' ? 'Sin GPS' : 'GPS…'}`;
 }
 
-function tarjetaGuia(g, conAcciones = true) {
+function tarjetaGuia(g, conAcciones = true, bloqueada = false) {
   const nav = g.dest_lat ? `${g.dest_lat},${g.dest_lng}` : encodeURIComponent([g.direccion, g.comuna].filter(Boolean).join(', '));
   return `<div class="card gcard ${g.estado}" data-id="${g.id}">
     <div class="top"><div><span class="eyebrow">${g.orden ? 'Parada ' + g.orden + ' · ' : ''}Guía</span><div class="folio">${esc(g.folio)}</div></div>${badge(g.estado)}</div>
@@ -430,7 +494,8 @@ function tarjetaGuia(g, conAcciones = true) {
     ${g.detalle ? `<div class="det">${esc(g.detalle)}</div>` : ''}
     ${g.observacion ? `<div class="sub"><b>Obs:</b> ${esc(g.observacion)}</div>` : ''}
     ${g.fecha !== hoy() ? `<div class="sub" style="color:var(--bad)">Guía del ${fechaCL(g.fecha)}</div>` : ''}
-    ${conAcciones ? `<div class="act">
+    ${conAcciones && bloqueada ? `<div class="sub" style="color:var(--warn);font-weight:600">Primero confirma la carga en planta para iniciar esta entrega.</div>` : ''}
+    ${conAcciones && !bloqueada ? `<div class="act">
       ${g.estado === 'asignada' ? `
         <a class="btn sm" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${nav}">${I.nav}Google Maps</a>
         <a class="btn sm" target="_blank" rel="noopener" href="https://waze.com/ul?${g.dest_lat ? 'll=' + nav : 'q=' + nav}&navigate=yes">${I.nav}Waze</a>
@@ -441,7 +506,9 @@ function tarjetaGuia(g, conAcciones = true) {
 }
 
 async function vistaRuta(el) {
-  if (!S.jornada) { topChofer(); return pedirPatente(false); }
+  const { data: rutas } = await sb.from('ent_rutas').select('*').eq('chofer_id', S.perfil.id).in('estado', ['asignada', 'aceptada', 'en_ruta']).gte('fecha', sumarDias(hoy(), -1)).order('fecha').order('asignada_at');
+  S.rutasChofer = rutas || [];
+  if (!S.jornada && !S.rutasChofer.length) { topChofer(); return pedirPatente(false); }
   topChofer();
   const { data, error } = await sb.from('ent_guias').select('*')
     .eq('chofer_id', S.perfil.id).neq('estado', 'anulada')
@@ -449,11 +516,14 @@ async function vistaRuta(el) {
     .order('fecha').order('orden').order('created_at');
   if (error) { el.innerHTML = `<div class="ctx err">${esc(errMsg(error))}</div>`; return; }
   S.guiasChofer = data;
+  const rutaDe = (g) => g.ruta_id ? S.rutasChofer.find(r => r.id === g.ruta_id) : null;
+  const bloqueada = (g) => { const r = rutaDe(g); return r && r.estado !== 'en_ruta'; };
+  const cargasHtml = S.rutasChofer.filter(r => r.estado !== 'en_ruta').map(r => tarjetaCarga(r, data.filter(g => g.ruta_id === r.id))).join('');
   const pend = data.filter(g => ['asignada', 'en_destino'].includes(g.estado));
   const hechas = data.filter(g => !['asignada', 'en_destino'].includes(g.estado));
   const tot = data.length || 1;
   const n = (e) => data.filter(g => g.estado === e).length;
-  el.innerHTML = `
+  el.innerHTML = cargasHtml + `
     <div class="hero" style="grid-template-columns:minmax(0,1fr)">
       <div>
         <span class="eyebrow" style="color:color-mix(in srgb,var(--bg) 70%,transparent)">${esc(S.perfil.nombre)} · ${fechaLarga(hoy())}</span>
@@ -467,9 +537,21 @@ async function vistaRuta(el) {
       </div>
     </div>
     <div class="sec-h"><div><h2>Por entregar</h2><p>En el orden en que Logística las asignó.</p></div><button class="btn sm" id="bRef">${I.refresh}Actualizar</button></div>
-    <div class="grid" style="gap:12px">${pend.length ? pend.map(g => tarjetaGuia(g)).join('') : `<div class="card empty"><b>No tienes entregas pendientes</b>Si esperas guías, pide a Logística que te las asigne y presiona Actualizar.</div>`}</div>
+    <div class="grid" style="gap:12px">${pend.length ? pend.map(g => tarjetaGuia(g, true, bloqueada(g))).join('') : `<div class="card empty"><b>No tienes entregas pendientes</b>Si esperas guías, pide a Logística que te las asigne y presiona Actualizar.</div>`}</div>
     ${hechas.length ? `<div class="sec-h block"><div><h2>Completadas hoy</h2></div></div><div class="grid" style="gap:12px">${hechas.map(g => tarjetaGuia(g, false)).join('')}</div>` : ''}`;
   $('#bRef').onclick = () => go('ruta');
+  $$('[data-racc]', el).forEach(b => b.onclick = async () => {
+    const r = S.rutasChofer.find(x => x.id === b.closest('[data-ruta]').dataset.ruta), acc = b.dataset.racc;
+    if (acc === 'salir' && !confirm('¿Confirmas que el camión está cargado y sales a ruta?')) return;
+    b.disabled = true;
+    try {
+      if (r.patente) await iniciarJornadaCon(r.patente);
+      const { error } = await sb.rpc('ent_chofer_ruta', { p_ruta: r.id, p_accion: acc });
+      if (error) throw error;
+      toast(acc === 'aceptar' ? 'Carga aceptada. Dirígete a planta.' : 'Buen viaje. El cliente ya puede ver tu camión en el mapa.');
+      revisarAvisos(); go('ruta');
+    } catch (e) { toast(errMsg(e)); b.disabled = false; }
+  });
   $$('[data-acc=llegue]', el).forEach(b => b.onclick = () => marcarLlegada(b.closest('.gcard').dataset.id, b));
   $$('[data-acc=registrar]', el).forEach(b => b.onclick = () => formEntrega(S.guiasChofer.find(g => g.id === b.closest('.gcard').dataset.id)));
 }
