@@ -52,7 +52,7 @@ async function vistaInicio(el) {
       <p style="opacity:.8;max-width:52ch;margin:0">Asigna las guías de despacho a cada chofer con su dirección de entrega. Ellos marcan la llegada, sacan fotos, registran quién recibe, la firma y las devoluciones.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="btn primary" data-act="nueva-guia">${I.plus}Nueva guía</button><button class="btn" data-act="go" data-to="guias" style="background:transparent;color:inherit;border-color:color-mix(in srgb,var(--bg) 30%,transparent)">Pegar guías desde Excel</button></div></div>
       <div class="fleet" style="align-items:center;justify-content:center;flex-direction:row;gap:18px;color:var(--bg)">${[60, 84, 60].map(w => `<span style="width:${w}px;opacity:.85">${I.truck}</span>`).join('')}</div></div>
-      <div class="card"><div class="empty"><b>Así funciona</b>1. Crea los choferes en <b>Usuarios</b> (ingresan con RUT y clave). 2. Asigna guías en <b>Guías</b>. 3. Sigue los camiones en <b>Mapa</b>. 4. Revisa fotos, firmas y devoluciones en <b>Entregas</b>.</div></div>`;
+      <div class="card how"><span class="eyebrow">Así funciona</span><ol class="steps"><li><b>Usuarios</b>Crea los choferes. Ingresan con RUT y clave.</li><li><b>Guías</b>Asigna las guías de despacho a cada chofer.</li><li><b>Mapa</b>Sigue los camiones en tiempo real.</li><li><b>Entregas</b>Revisa fotos, firmas y devoluciones.</li></ol></div>`;
     return;
   }
 

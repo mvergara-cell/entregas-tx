@@ -367,3 +367,7 @@ td.num{white-space:nowrap}
 .bellbtn .dot{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--brand);color:#fff;font:700 10.5px/18px var(--f-mono)}
 .hero .btn.primary.xl{max-width:420px}
 input[type=file]{width:100%}
+
+.how{padding:16px 18px}.steps{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;counter-reset:s}.steps li{counter-increment:s;background:var(--sunk);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--muted);line-height:1.4}.steps li::before{content:"0" counter(s);display:block;font-family:var(--f-mono);font-weight:700;color:var(--brand);font-size:12px;margin-bottom:6px}.steps li b{display:block;color:var(--ink);font-size:14px;margin-bottom:2px}@media (max-width:700px){.steps{grid-template-columns:1fr 1fr}}
+
+.ttl small::before{content:"";display:inline-block;width:7px;height:7px;border-radius:2px;background:#2fb36b;margin-right:7px;vertical-align:1px;box-shadow:0 0 10px #2fb36b}
